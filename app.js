@@ -1,85 +1,112 @@
- emailjs.init('S71uulqDXROPVUCtR');
+const header = document.querySelector('.site-header');
+const menuButton = document.querySelector('#menuButton');
+const mobileMenu = document.querySelector('#mobileMenu');
+const scrollProgress = document.querySelector('#scrollProgress');
+const currentYear = document.querySelector('#currentYear');
+const contactForm = document.querySelector('.contact-form');
 
-    // ── Cursor ───────────────────────────────────────────
-    const cursor = document.getElementById('cursor');
-    const ring   = document.getElementById('cursorRing');
-    let mx=0, my=0, rx=0, ry=0;
-    document.addEventListener('mousemove', e => {
-      mx=e.clientX; my=e.clientY;
-      cursor.style.left=mx+'px'; cursor.style.top=my+'px';
-    });
-    (function loop(){
-      rx+=(mx-rx)*.1; ry+=(my-ry)*.1;
-      ring.style.left=rx+'px'; ring.style.top=ry+'px';
-      requestAnimationFrame(loop);
-    })();
-    document.querySelectorAll('a,button,.service-card').forEach(el=>{
-      el.addEventListener('mouseenter',()=>{ ring.style.width='44px'; ring.style.height='44px'; ring.style.opacity='.7'; });
-      el.addEventListener('mouseleave',()=>{ ring.style.width='30px'; ring.style.height='30px'; ring.style.opacity='1'; });
-    });
+header?.classList.add('is-enhanced');
 
-    // ── Hamburger ────────────────────────────────────────
-    const hamburger  = document.getElementById('hamburger');
-    const mobileMenu = document.getElementById('mobileMenu');
-    hamburger.addEventListener('click',()=>{ hamburger.classList.toggle('open'); mobileMenu.classList.toggle('open'); });
-    function closeMobileMenu(){ hamburger.classList.remove('open'); mobileMenu.classList.remove('open'); }
+const setMenuState = (open) => {
+  if (!menuButton || !mobileMenu) return;
 
-    // ── Scroll reveal ────────────────────────────────────
-    const io = new IntersectionObserver(entries=>{
-      entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
-    },{threshold:.1});
-    document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  menuButton.setAttribute('aria-expanded', String(open));
+  menuButton.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+  mobileMenu.hidden = !open;
+  document.body.classList.toggle('menu-open', open);
+};
 
-    // ── Skill bars ───────────────────────────────────────
-    const barIO = new IntersectionObserver(entries=>{
-      entries.forEach(e=>{ if(e.isIntersecting){ const f=e.target; f.style.transform=`scaleX(${f.dataset.w})`; }});
-    },{threshold:.5});
-    document.querySelectorAll('.skill-bar-fill').forEach(f=>barIO.observe(f));
+menuButton?.addEventListener('click', () => {
+  const willOpen = menuButton.getAttribute('aria-expanded') !== 'true';
+  setMenuState(willOpen);
 
-    // ── Formulario con EmailJS ───────────────────────────
-    const nameInput    = document.getElementById('contact-name');
-    const emailInput   = document.getElementById('contact-email');
-    const msgInput     = document.getElementById('contact-msg');
-    const sendBtn      = document.getElementById('send-btn');
-    const formFeedback = document.getElementById('form-feedback');
+  if (willOpen) {
+    mobileMenu?.querySelector('a')?.focus();
+  }
+});
 
-    sendBtn.addEventListener('click', async () => {
-      const name    = nameInput.value.trim();
-      const email   = emailInput.value.trim();
-      const message = msgInput.value.trim();
+mobileMenu?.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => setMenuState(false));
+});
 
-      if (!name || !email || !message) {
-        showFeedback('Por favor completa todos los campos.', 'error');
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showFeedback('Ingresa un email válido.', 'error');
-        return;
-      }
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && menuButton?.getAttribute('aria-expanded') === 'true') {
+    setMenuState(false);
+    menuButton.focus();
+  }
+});
 
-      sendBtn.textContent = 'Enviando...';
-      sendBtn.disabled = true;
+const desktopBreakpoint = window.matchMedia('(min-width: 861px)');
+const closeMenuOnDesktop = (event) => {
+  if (event.matches) setMenuState(false);
+};
 
-      try {
-        await emailjs.send('service_f86jjuo', 'template_x26jd1k', {
-          from_name:  name,
-          from_email: email,
-          message:    message,
-        });
-        showFeedback('¡Mensaje enviado! Te responderé pronto 🙌', 'success');
-        nameInput.value = ''; emailInput.value = ''; msgInput.value = '';
-        sendBtn.textContent = 'Enviado ✓';
-        setTimeout(() => { sendBtn.textContent = 'Enviar mensaje →'; sendBtn.disabled = false; }, 4000);
-      } catch(err) {
-        showFeedback('Hubo un error al enviar. Intenta de nuevo.', 'error');
-        sendBtn.textContent = 'Enviar mensaje →';
-        sendBtn.disabled = false;
-      }
-    });
+desktopBreakpoint.addEventListener('change', closeMenuOnDesktop);
 
-    function showFeedback(msg, type) {
-      formFeedback.textContent = msg;
-      formFeedback.style.color = type === 'success' ? '#6dbf8b' : '#cf6679';
-      formFeedback.style.opacity = '1';
-      setTimeout(() => { formFeedback.style.opacity = '0'; }, 5000);
+let progressTicking = false;
+
+const updateScrollProgress = () => {
+  const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = scrollableHeight > 0 ? window.scrollY / scrollableHeight : 0;
+  scrollProgress?.style.setProperty('transform', `scaleX(${Math.min(1, Math.max(0, progress))})`);
+  progressTicking = false;
+};
+
+window.addEventListener(
+  'scroll',
+  () => {
+    if (!progressTicking) {
+      window.requestAnimationFrame(updateScrollProgress);
+      progressTicking = true;
     }
+  },
+  { passive: true },
+);
+
+updateScrollProgress();
+
+const sectionLinks = [...document.querySelectorAll('.desktop-nav a')];
+const observedSections = sectionLinks
+  .map((link) => document.querySelector(link.getAttribute('href')))
+  .filter(Boolean);
+
+if ('IntersectionObserver' in window && observedSections.length) {
+  const sectionObserver = new IntersectionObserver(
+    (entries) => {
+      const visibleEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (!visibleEntry) return;
+
+      sectionLinks.forEach((link) => {
+        const isCurrent = link.getAttribute('href') === `#${visibleEntry.target.id}`;
+        if (isCurrent) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+    },
+    { rootMargin: '-30% 0px -58%', threshold: [0, 0.15, 0.4] },
+  );
+
+  observedSections.forEach((section) => sectionObserver.observe(section));
+}
+
+if (currentYear) {
+  currentYear.textContent = String(new Date().getFullYear());
+}
+
+contactForm?.addEventListener('submit', () => {
+  const submitButton = contactForm.querySelector('button[type="submit"]');
+  if (!submitButton) return;
+
+  submitButton.disabled = true;
+  submitButton.textContent = 'Enviando…';
+});
+
+window.addEventListener('pageshow', () => {
+  const submitButton = contactForm?.querySelector('button[type="submit"]');
+  if (!submitButton) return;
+
+  submitButton.disabled = false;
+  submitButton.innerHTML = 'Enviar mensaje <span aria-hidden="true">→</span>';
+});

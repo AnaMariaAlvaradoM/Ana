@@ -1,0 +1,12 @@
+{
+  "name": "ana-alvarado-portfolio",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Portafolio profesional de Ana Alvarado.",
+  "scripts": {
+    "test": "node scripts/validate.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
